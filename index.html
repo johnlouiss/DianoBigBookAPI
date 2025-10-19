@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigBook Explorer - AI-Powered Book Discovery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            50: '#fefcf5',
+                            100: '#fdf6e3',
+                            500: '#d4af37',
+                            600: '#b8941f',
+                            700: '#9c7c1a',
+                            800: '#7f6516'
+                        },
+                        charcoal: {
+                            50: '#f8f9fa',
+                            100: '#e9ecef',
+                            800: '#343a40',
+                            900: '#212529'
+                        }
+                    },
+                    fontFamily: {
+                        'display': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'bounce-gentle': 'bounceGentle 2s infinite',
+                        'float': 'float 6s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        bounceGentle: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --primary-gold: #d4af37;
+            --dark-charcoal: #212529;
+        }
+
+        .dark {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+        }
+
+        .light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .book-cover {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .book-cover:hover {
+            transform: translateY(-8px) rotate(2deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .floating-action-btn {
+            animation: bounceGentle 2s infinite;
+        }
+
+        .nav-link {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #d4af37;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .theme-transition * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .ai-recommendation-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-recommendation-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .pulse-ai {
+            animation: pulse 2s infinite;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .book-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        .loading-dots:after {
+            content: '';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+
+        .fade-in-stagger > * {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .fade-in-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+        .fade-in-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+        .fade-in-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+        .fade-in-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+        .fade-in-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body class="theme-transition font-sans bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+    <!-- Enhanced Navigation -->
+    <header class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-all duration-300">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <div class="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center shadow-lg">
+                            <i class="fas fa-book-open text-white text-lg"></i>
+                        </div>
+                        <div class="absolute -top-1 -right-1 w-4 h-4 bg-gold-700 rounded-full flex items-center justify-center">
+                            <div class="w-2 h-2 bg-white rounded-full"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-display font-bold text-gray-800 dark:text-white">BigBook Explorer</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">AI-Powered Discovery</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="#hero" class="nav-link text-gray-700 dark:text-gray-300 hover:text-gold-500 font-medium transition-colors duration-300 active">Home</a>
+                    <a href="#discovery" class="nav-link text-gray-700 dark:text-gray-300 hover:text-gold-500 font-medium transition-colors duration-300">Discover</a>
+                    <a href="#ai-recommendations" class="nav-link text-gray-700 dark:text-gray-300 hover:text-gold-500 font-medium transition-colors duration-300">AI Picks</a>
+                    <a href="#authors" class="nav-link text-gray-700 dark:text-gray-300 hover:text-gold-500 font-medium transition-colors duration-300">Authors</a>
+                    <a href="#reading-stats" class="nav-link text-gray-700 dark:text-gray-300 hover:text-gold-500 font-medium transition-colors duration-300">My Stats</a>
+                </nav>
+
+                <!-- Right side actions -->
+                <div class="flex items-center space-x-4">
+                    <!-- AI Recommendation Badge -->
+                    <div class="hidden md:flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                        <i class="fas fa-robot"></i>
+                        <span>AI Powered</span>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gold-500 hover:text-white transition-all duration-300 flex items-center justify-center w-10 h-10">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+
+                    <!-- User Menu -->
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-2 hover:bg-gold-500 hover:text-white transition-all duration-300">
+                            <div class="w-8 h-8 bg-gold-500 rounded-full flex items-center justify-center text-white font-bold">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="hidden md:block font-medium">Reader</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Enhanced Hero Section with AI Focus -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-blue-900/30 overflow-hidden">
+        <!-- Animated Background Elements -->
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute top-20 left-10 w-20 h-20 bg-gold-500/20 rounded-full blur-xl animate-float"></div>
+            <div class="absolute top-40 right-20 w-16 h-16 bg-purple-500/20 rounded-full blur-xl animate-float" style="animation-delay: 1s"></div>
+            <div class="absolute bottom-32 left-1/4 w-24 h-24 bg-blue-500/20 rounded-full blur-xl animate-float" style="animation-delay: 2s"></div>
+            <div class="absolute bottom-20 right-32 w-12 h-12 bg-green-500/20 rounded-full blur-xl animate-float" style="animation-delay: 3s"></div>
+        </div>
+
+        <div class="container mx-auto px-4 py-16 relative z-10">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <!-- Left Content -->
+                    <div class="text-left">
+                        <div class="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">
+                            <i class="fas fa-robot text-gold-500"></i>
+                            <span>AI-Powered Book Discovery</span>
+                        </div>
+                        
+                        <h1 class="text-5xl md:text-6xl font-display font-bold mb-6 leading-tight">
+                            Discover Books
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-500 to-purple-600 block">
+                                You'll Love
+                            </span>
+                        </h1>
+                        
+                        <p class="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+                            Our intelligent AI analyzes your reading preferences to recommend perfect books tailored just for you. No more endless scrolling – find your next favorite read instantly.
+                        </p>
+
+                        <!-- AI Recommendation Starter -->
+                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700 mb-8">
+                            <h3 class="font-display font-bold text-lg mb-4">Get AI Recommendations</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">What was the last book you loved?</label>
+                                    <input type="text" id="favorite-book" placeholder="Enter book title..." 
+                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-gold-500 focus:border-transparent transition-all">
+                                </div>
+                                <button id="get-ai-recommendations" class="w-full bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg">
+                                    <i class="fas fa-robot mr-2"></i>Get AI Recommendations
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Content - Featured AI Picks -->
+                    <div class="relative">
+                        <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-brain text-white text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-display font-bold text-xl">Today's AI Picks</h3>
+                                    <p class="text-gray-600 dark:text-gray-400">Personalized for you</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4" id="ai-featured-books">
+                                <!-- AI recommended books will appear here -->
+                                <div class="skeleton-loader h-20 rounded-xl"></div>
+                                <div class="skeleton-loader h-20 rounded-xl"></div>
+                                <div class="skeleton-loader h-20 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Recommendation Engine Section -->
+    <section id="ai-recommendations" class="py-20 bg-gray-50 dark:bg-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-display font-bold mb-4">AI-Powered Recommendations</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    Our intelligent algorithm analyzes millions of data points to find books you'll love based on your unique reading profile.
+                </p>
+            </div>
+
+            <!-- AI Recommendation Interface -->
+            <div class="max-w-4xl mx-auto">
+                <div class="grid md:grid-cols-3 gap-8 mb-12">
+                    <div class="text-center p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg">
+                        <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-book-open text-white text-2xl"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-lg mb-2">Reading History</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Analyzes books you've enjoyed</p>
+                    </div>
+                    <div class="text-center p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg">
+                        <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-users text-white text-2xl"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-lg mb-2">Similar Readers</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Finds readers with similar taste</p>
+                    </div>
+                    <div class="text-center p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg">
+                        <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-chart-line text-white text-2xl"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-lg mb-2">Trend Analysis</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Identifies emerging patterns</p>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation Results -->
+                <div id="ai-results-section" class="hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-2xl font-display font-bold">Your AI Recommendations</h3>
+                        <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Updated just now</span>
+                        </div>
+                    </div>
+                    
+                    <div class="book-grid fade-in-stagger" id="ai-recommendation-results">
+                        <!-- AI recommended books will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Similar Books Section -->
+                <div id="similar-books-section" class="hidden mt-16">
+                    <h3 class="text-2xl font-display font-bold mb-8">Books Similar to Your Favorites</h3>
+                    <div class="book-grid fade-in-stagger" id="similar-books-results">
+                        <!-- Similar books will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Enhanced Book Discovery with API Integration -->
+    <section id="discovery" class="py-20 bg-white dark:bg-gray-900">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-display font-bold mb-4">Book Discovery</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    Explore our vast collection of books from the BigBook API
+                </p>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="max-w-4xl mx-auto mb-12">
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <input type="text" id="search-books" placeholder="Search books..." 
+                               class="px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-gold-500 transition-all">
+                        <select id="genre-filter" class="px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-gold-500 transition-all">
+                            <option value="">All Genres</option>
+                        </select>
+                        <select id="author-filter" class="px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-gold-500 transition-all">
+                            <option value="">All Authors</option>
+                        </select>
+                        <button id="search-button" class="bg-gold-500 hover:bg-gold-600 text-white px-6 py-3 rounded-xl font-medium transition-all transform hover:scale-105">
+                            <i class="fas fa-search mr-2"></i>Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Book Results -->
+            <div class="book-grid fade-in-stagger" id="book-results">
+                <!-- Books will be populated from API -->
+            </div>
+
+            <!-- Load More -->
+            <div class="text-center mt-12">
+                <button id="load-more" class="bg-gray-100 dark:bg-gray-800 hover:bg-gold-500 hover:text-white text-gray-700 dark:text-gray-300 px-8 py-4 rounded-xl font-medium transition-all transform hover:scale-105">
+                    Load More Books
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Author Discovery Section -->
+    <section id="authors" class="py-20 bg-gray-50 dark:bg-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-display font-bold mb-4">Discover Authors</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    Find your favorite authors and discover new ones
+                </p>
+            </div>
+
+            <!-- Author Search -->
+            <div class="max-w-2xl mx-auto mb-12">
+                <div class="relative">
+                    <input type="text" id="search-authors" placeholder="Search authors..." 
+                           class="w-full px-6 py-4 rounded-2xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-gold-500 transition-all">
+                    <button class="absolute right-3 top-3 bg-gold-500 hover:bg-gold-600 text-white p-3 rounded-xl transition-colors">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Author Results -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8" id="author-results">
+                <!-- Authors will be populated from API -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Reading Statistics Section -->
+    <section id="reading-stats" class="py-20 bg-white dark:bg-gray-900">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-4xl font-display font-bold mb-4">Your Reading Journey</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-400 mb-12">
+                    Track your reading progress and discover insights about your reading habits
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="text-center p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                        <div class="text-3xl font-bold text-gold-500 mb-2" id="books-read">0</div>
+                        <div class="text-gray-600 dark:text-gray-400">Books Read</div>
+                    </div>
+                    <div class="text-center p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                        <div class="text-3xl font-bold text-gold-500 mb-2" id="reading-streak">0</div>
+                        <div class="text-gray-600 dark:text-gray-400">Day Streak</div>
+                    </div>
+                    <div class="text-center p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                        <div class="text-3xl font-bold text-gold-500 mb-2" id="pages-read">0</div>
+                        <div class="text-gray-600 dark:text-gray-400">Pages Read</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Enhanced Footer -->
+    <footer class="bg-gray-900 text-white py-16">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-book-open text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold">BigBook Explorer</h3>
+                    </div>
+                    <p class="text-gray-400 mb-6">
+                        AI-powered book discovery platform powered by BigBook API
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="font-display font-bold text-lg mb-6">Explore</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#discovery" class="text-gray-400 hover:text-gold-500 transition-colors">Books</a></li>
+                        <li><a href="#authors" class="text-gray-400 hover:text-gold-500 transition-colors">Authors</a></li>
+                        <li><a href="#ai-recommendations" class="text-gray-400 hover:text-gold-500 transition-colors">AI Recommendations</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-display font-bold text-lg mb-6">API</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-gray-400 hover:text-gold-500 transition-colors">Documentation</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-gold-500 transition-colors">Endpoints</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-gold-500 transition-colors">Authentication</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-display font-bold text-lg mb-6">Newsletter</h4>
+                    <p class="text-gray-400 mb-4">Get AI book recommendations weekly</p>
+                    <div class="flex">
+                        <input type="email" placeholder="Your email" class="flex-1 bg-gray-800 text-white px-4 py-3 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-gold-500">
+                        <button class="bg-gold-500 hover:bg-gold-600 text-white px-6 rounded-r-lg transition-colors">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+                <p>Powered by BigBook API • AI-Powered Book Discovery</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'https://api.bigbookapi.com';
+        
+        // Enhanced Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const body = document.body;
+
+        function setTheme(theme) {
+            if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                body.classList.add('dark');
+                body.classList.remove('light');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light');
+                body.classList.remove('dark');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        setTheme(localStorage.getItem('theme'));
+
+        themeToggle.addEventListener('click', function() {
+            themeToggle.classList.add('scale-90');
+            setTimeout(() => {
+                themeToggle.classList.remove('scale-90');
+            }, 150);
+
+            if (body.classList.contains('dark')) {
+                setTheme('light');
+            } else {
+                setTheme('dark');
+            }
+        });
+
+        // API Service Class
+        class BigBookAPIService {
+            constructor() {
+                this.baseUrl = API_BASE_URL;
+            }
+
+            async fetchData(endpoint, params = {}) {
+                try {
+                    const queryString = new URLSearchParams(params).toString();
+                    const url = `${this.baseUrl}${endpoint}${queryString ? `?${queryString}` : ''}`;
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('API request failed');
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('API Error:', error);
+                    // Fallback to mock data
+                    return this.getMockData(endpoint, params);
+                }
+            }
+
+            getMockData(endpoint, params) {
+                // Mock data implementation for demonstration
+                const mockData = {
+                    '/search-books': this.generateMockBooks(12),
+                    '/search-authors': this.generateMockAuthors(6),
+                };
+                
+                return new Promise(resolve => {
+                    setTimeout(() => resolve(mockData[endpoint] || []), 1000);
+                });
+            }
+
+            generateMockBooks(count) {
+                const books = [];
+                const titles = [
+                    "The Midnight Library", "Project Hail Mary", "Klara and the Sun", 
+                    "The Silent Patient", "Where the Crawdads Sing", "Educated",
+                    "The Vanishing Half", "Circe", "The Night Circus", "Pachinko"
+                ];
+                
+                for (let i = 0; i < count; i++) {
+                    books.push({
+                        id: i + 1,
+                        title: titles[i % titles.length],
+                        author: `Author ${i + 1}`,
+                        description: "A captivating story that will keep you turning pages.",
+                        rating: (Math.random() * 2 + 3).toFixed(1),
+                        genre: ["Fiction", "Mystery", "Sci-Fi", "Fantasy"][i % 4],
+                        cover_url: `https://picsum.photos/200/300?random=${i}`
+                    });
+                }
+                return books;
+            }
+
+            generateMockAuthors(count) {
+                const authors = [];
+                const names = ["Stephen King", "J.K. Rowling", "Margaret Atwood", "George R.R. Martin"];
+                
+                for (let i = 0; i < count; i++) {
+                    authors.push({
+                        id: i + 1,
+                        name: names[i % names.length],
+                        bio: "Renowned author with multiple bestselling books.",
+                        book_count: Math.floor(Math.random() * 50) + 10
+                    });
+                }
+                return authors;
+            }
+
+            // API Methods
+            async searchBooks(query, filters = {}) {
+                return await this.fetchData('/search-books', { q: query, ...filters });
+            }
+
+            async searchAuthors(query) {
+                return await this.fetchData('/search-authors', { q: query });
+            }
+
+            async getBookDetails(id) {
+                return await this.fetchData(`/${id}`);
+            }
+
+            async getSimilarBooks(id) {
+                return await this.fetchData(`/${id}/similar`);
+            }
+
+            async getAIRecommendations(preferences) {
+                // Simulate AI recommendations based on preferences
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve(this.generateMockBooks(6));
+                    }, 2000);
+                });
+            }
+        }
+
+        // Initialize API Service
+        const apiService = new BigBookAPIService();
+
+        // DOM Elements
+        const aiRecommendationBtn = document.getElementById('get-ai-recommendations');
+        const aiResultsSection = document.getElementById('ai-results-section');
+        const similarBooksSection = document.getElementById('similar-books-section');
+        const searchBooksInput = document.getElementById('search-books');
+        const searchAuthorsInput = document.getElementById('search-authors');
+        const searchButton = document.getElementById('search-button');
+
+        // AI Recommendation Engine
+        aiRecommendationBtn.addEventListener('click', async function() {
+            const favoriteBook = document.getElementById('favorite-book').value;
+            
+            if (!favoriteBook) {
+                showNotification('Please enter a book you love to get recommendations', 'error');
+                return;
+            }
+
+            // Show loading state
+            aiRecommendationBtn.innerHTML = '<i class="fas fa-robot mr-2"></i>Analyzing Preferences<span class="loading-dots"></span>';
+            aiRecommendationBtn.disabled = true;
+
+            try {
+                // Get AI recommendations
+                const recommendations = await apiService.getAIRecommendations({
+                    favoriteBook: favoriteBook
+                });
+
+                // Display recommendations
+                displayAIRecommendations(recommendations);
+                
+                // Show similar books section
+                similarBooksSection.classList.remove('hidden');
+                
+                showNotification('AI recommendations generated successfully!', 'success');
+            } catch (error) {
+                showNotification('Error generating recommendations', 'error');
+            } finally {
+                aiRecommendationBtn.innerHTML = '<i class="fas fa-robot mr-2"></i>Get AI Recommendations';
+                aiRecommendationBtn.disabled = false;
+            }
+        });
+
+        // Display AI Recommendations
+        function displayAIRecommendations(books) {
+            const container = document.getElementById('ai-recommendation-results');
+            container.innerHTML = '';
+
+            books.forEach(book => {
+                const bookCard = createBookCard(book, true);
+                container.appendChild(bookCard);
+            });
+
+            aiResultsSection.classList.remove('hidden');
+            aiResultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Create Book Card
+        function createBookCard(book, isAI = false) {
+            const card = document.createElement('div');
+            card.className = `bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl border border-gray-200 dark:border-gray-700 ${isAI ? 'border-2 border-gold-500' : ''}`;
+            
+            card.innerHTML = `
+                <div class="relative">
+                    <img src="${book.cover_url}" alt="${book.title}" class="w-full h-64 object-cover book-cover" onerror="this.src='https://via.placeholder.com/200x300/4A5568/FFFFFF?text=Book+Cover'">
+                    ${isAI ? `
+                        <div class="absolute top-4 left-4">
+                            <span class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                                <i class="fas fa-robot mr-1"></i>AI Pick
+                            </span>
+                        </div>
+                    ` : ''}
+                    <div class="absolute top-4 right-4">
+                        <span class="bg-white/90 dark:bg-gray-800/90 text-gold-600 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
+                            <i class="fas fa-star mr-1"></i>${book.rating}
+                        </span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <h3 class="font-display font-bold text-xl mb-2 line-clamp-2">${book.title}</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">by ${book.author}</p>
+                    <p class="text-gray-500 dark:text-gray-500 text-sm mb-6 line-clamp-3">${book.description}</p>
+                    <div class="flex justify-between items-center">
+                        <button class="view-details bg-gold-500 hover:bg-gold-600 text-white px-4 py-2 rounded-lg transition-colors font-medium" data-book-id="${book.id}">
+                            View Details
+                        </button>
+                        <button class="like-book text-gray-400 hover:text-red-500 transition-colors" data-book-id="${book.id}">
+                            <i class="far fa-heart text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Search Books
+        searchButton.addEventListener('click', async function() {
+            const query = searchBooksInput.value;
+            await performBookSearch(query);
+        });
+
+        async function performBookSearch(query = '') {
+            const bookResults = document.getElementById('book-results');
+            bookResults.innerHTML = '<div class="col-span-full text-center py-12"><div class="loading-dots text-2xl text-gold-500">Searching</div></div>';
+
+            try {
+                const books = await apiService.searchBooks(query);
+                displayBookResults(books);
+            } catch (error) {
+                showNotification('Error searching books', 'error');
+            }
+        }
+
+        function displayBookResults(books) {
+            const container = document.getElementById('book-results');
+            container.innerHTML = '';
+
+            if (books.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">No books found</div>';
+                return;
+            }
+
+            books.forEach(book => {
+                const bookCard = createBookCard(book);
+                container.appendChild(bookCard);
+            });
+        }
+
+        // Search Authors
+        searchAuthorsInput.addEventListener('input', debounce(async function(e) {
+            const query = e.target.value;
+            if (query.length < 2) return;
+
+            try {
+                const authors = await apiService.searchAuthors(query);
+                displayAuthorResults(authors);
+            } catch (error) {
+                showNotification('Error searching authors', 'error');
+            }
+        }, 500));
+
+        function displayAuthorResults(authors) {
+            const container = document.getElementById('author-results');
+            container.innerHTML = '';
+
+            authors.forEach(author => {
+                const authorCard = document.createElement('div');
+                authorCard.className = 'bg-white dark:bg-gray-700 rounded-2xl p-6 shadow-lg';
+                
+                authorCard.innerHTML = `
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-r from-gold-500 to-gold-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl">
+                            ${author.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-lg">${author.name}</h3>
+                            <p class="text-gray-600 dark:text-gray-400">${author.book_count} books</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mb-4 line-clamp-2">${author.bio}</p>
+                    <button class="w-full bg-gray-100 dark:bg-gray-600 hover:bg-gold-500 hover:text-white text-gray-700 dark:text-gray-300 py-2 rounded-lg transition-colors font-medium">
+                        View Books
+                    </button>
+                `;
+
+                container.appendChild(authorCard);
+            });
+        }
+
+        // Load Featured AI Books on Hero Section
+        async function loadFeaturedAIBooks() {
+            const container = document.getElementById('ai-featured-books');
+            
+            try {
+                const featuredBooks = await apiService.getAIRecommendations({});
+                
+                container.innerHTML = '';
+                featuredBooks.slice(0, 3).forEach(book => {
+                    const bookElement = document.createElement('div');
+                    bookElement.className = 'flex items-center space-x-4 p-4 bg-white/50 dark:bg-gray-700/50 rounded-xl backdrop-blur-sm';
+                    
+                    bookElement.innerHTML = `
+                        <img src="${book.cover_url}" alt="${book.title}" class="w-12 h-16 object-cover rounded-lg" onerror="this.src='https://via.placeholder.com/100x150/4A5568/FFFFFF?text=Cover'">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm line-clamp-1">${book.title}</h4>
+                            <p class="text-gray-600 dark:text-gray-400 text-xs">${book.author}</p>
+                            <div class="flex items-center space-x-1 mt-1">
+                                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                                <span class="text-xs text-gray-600 dark:text-gray-400">${book.rating}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(bookElement);
+                });
+            } catch (error) {
+                console.error('Error loading featured books:', error);
+            }
+        }
+
+        // Utility Functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification implementation
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFeaturedAIBooks();
+            performBookSearch(); // Load initial books
+            
+            // Initialize reading stats
+            document.getElementById('books-read').textContent = '24';
+            document.getElementById('reading-streak').textContent = '15';
+            document.getElementById('pages-read').textContent = '3,842';
+        });
+    </script>
+</body>
+</html>
